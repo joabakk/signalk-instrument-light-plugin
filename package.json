@@ -27,7 +27,7 @@
 	"devDependencies": {
 		"chai": "^4.0.0",
 		"chai-things": "^0.2.0",
-		"debug": "^3.0.0",
+		"debug": "^4.1.1",
 		"mocha": "^6.1.4",
 		"signalk-schema": "0.0.1-3"
 	}
