@@ -145,6 +145,9 @@ function isItTime (app, props){
 }
 
 function repeat(app, props, lightLevel){
+  if (repeatTimer) {
+    clearInterval(repeatTimer)
+  }
   repeatTimer = setInterval(function() {
     if (props.Seatalk1){
       seatalkCommand = seaTalk[lightLevel]
