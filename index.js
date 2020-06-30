@@ -108,7 +108,7 @@ function isItTime (app, props){
   myTimer = setInterval(function() {
     debug("I am doing my " + minutes + " minutes check")
     var now = new Date()
-    var position = app.getSelfPath('navigation.position')
+    var position = app.getSelfPath('navigation.position.value')
     lat = position.latitude
     lon = position.longitude
     var sunrisePos = SunCalc.getPosition(new Date(), lat, lon)
