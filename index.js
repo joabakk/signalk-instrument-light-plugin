@@ -1,9 +1,7 @@
 const debug = require('debug')('instrumentlights')
-const Bacon = require('baconjs');
 const util = require('util')
 const _ = require('lodash')
 var SunCalc = require('suncalc')
-const signalkSchema = require('@signalk/signalk-schema')
 const react = require('react/package.json') // react is a peer dependency.
 const rjf = require('react-jsonschema-form')
 
@@ -109,6 +107,11 @@ function isItTime (app, props){
     debug("I am doing my " + minutes + " minutes check")
     var now = new Date()
     var position = app.getSelfPath('navigation.position.value')
+
+    if (! position) {
+      debug("Position is unknown, aborting check")
+      return
+    }
     lat = position.latitude
     lon = position.longitude
     var sunrisePos = SunCalc.getPosition(new Date(), lat, lon)
