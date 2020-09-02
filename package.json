@@ -1,6 +1,6 @@
 {
   "name": "signalk-instrument-light-plugin",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Plugin that controls proprietary instrument lights",
   "keywords": [
     "signalk-node-server-plugin"
