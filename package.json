@@ -22,7 +22,7 @@
     "prepublish": "npm run snyk-protect"
   },
   "dependencies": {
-    "react": "^16.0.0",
+    "react": "^16.14.0",
     "react-jsonschema-form": "^1.0.0",
     "suncalc": "^1.8.0",
     "snyk": "^1.389.0"
