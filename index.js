@@ -1,31 +1,39 @@
-const debug = require('debug')('instrumentlights')
 const util = require('util')
 const _ = require('lodash')
 var SunCalc = require('suncalc')
 const react = require('react/package.json') // react is a peer dependency.
 const rjf = require('react-jsonschema-form')
+const SerialPort = require ('serialport')
 
 // Seatalk1:
 const seaTalk = ["30,00,00", "30,00,04", "30,00,08", "30,00,0C"]
 /*30  00  0X      Set Lamp Intensity: X=0 off, X=4: 1, X=8: 2, X=C: 3*/
 //What is the difference between 30 and 80?
-
+const fdx = ["812A012B0000","812A012B0101","812A012B0202","812A012B0303"]
+//const fdx = [[0x81,0x2A,0x01,0x2B,0x00,0x00], [0x01,0x01,0x2B,0x01,0x2A,0x81], [0x81,0x2A,0x01,0x2B,0x02,0x02], [0x81,0x2A,0x01,0x2B,0x03,0x03]]
+//const fdx = [[0x81,0x36,0x01,0x37,0x00,0x00], [0x81,0x36,0x01,0x37,0x01,0x01], [0x81,0x36,0x01,0x37,0x02,0x02], [0x81,0x36,0x01,0x37,0x03,0x03]]
+//81 36 01 37 02 02
 var refresh
 var altitude
 var myTimer
 var repeatTimer
 var repeatInterval= 30000 //30 s repeats to ensure command is understood
+var sPort
 
 module.exports = function(app) {
   var unsubscribe = undefined
   var plugin = {}
 
   plugin.start = function(props) {
-    debug("starting...")
-    debug("started")
+    app.debug("starting...")
+    if (props.FDX.fdxout){
+      sPort = new SerialPort(props.FDX.fdxSerial, {baudRate: props.FDX.fdxBaud,
+      parity: 'none'}, false);
+    }
+
+    app.debug("started")
     isItTime(app, props)
   }
-
 
   plugin.stop = function() {
     clearInterval(myTimer)
@@ -33,10 +41,13 @@ module.exports = function(app) {
     if (unsubscribe) {
       unsubscribe()
     }
-    debug("Stopped")
+    sPort.close(function (err) {
+    console.log('port closed', err);
+});
+    app.debug("Stopped")
   }
 
-  plugin.id = "instrumentlights"
+  plugin.id = "signalk-instrument-light-plugin"
   plugin.name = "Instrument lights"
   plugin.description = "Plugin to control proprietary instrument lights"
 
@@ -46,13 +57,39 @@ module.exports = function(app) {
     properties: {
       Seatalk1: {
         title: "Seatalk1 instruments",
-        type: "boolean",
-        default: false
+        type: "object",
+        properties: {
+          seatalkBool: {
+            title: "Seatalk 1",
+            type: "boolean",
+            default: false
+          },
+          seatalkOutput: {
+            title: "Seatalk output name",
+            type: "string",
+            default: "seatalkOut"
+          }
+        }
       },
       FDX: {
-        title: "Silva/Nexus/Garmin instruments (FDX, not implemented yet)",
-        type: "boolean",
-        default: false
+        title: "Silva/Nexus/Garmin instruments (FDX)",
+        type: "object",
+        properties: {
+          fdxout: {
+            title: "Silva/Nexus/Garmin instruments (FDX)",
+            type: "boolean",
+            default: false
+          },
+          fdxBaud: {
+            title: "Baud rate for FDX",
+            type: "number",
+            default: 19200
+          },
+          fdxSerial: {
+            title: "Serial port for FDX protocol (eg. GND10)",
+            type: "string"
+          }
+        }
       },
       UpdateInterval: {
         title: "Interval to check for change in daylight (minutes)",
@@ -96,7 +133,6 @@ module.exports = function(app) {
       },
     }
   }
-
   return plugin;
 }
 
@@ -104,12 +140,12 @@ function isItTime (app, props){
 
   var minutes = props.UpdateInterval, the_interval = minutes * 60 * 1000
   myTimer = setInterval(function() {
-    debug("I am doing my " + minutes + " minutes check")
+    app.debug("I am doing my " + minutes + " minutes check")
     var now = new Date()
     var position = app.getSelfPath('navigation.position.value')
 
     if (! position) {
-      debug("Position is unknown, aborting check")
+      app.debug("Position is unknown, aborting check")
       return
     }
     lat = position.latitude
@@ -119,26 +155,26 @@ function isItTime (app, props){
 
     altitude = sunrisePos.altitude * 180 / 3.14
 
-    debug("sun is " + altitude.toFixed(2) + " degrees above horizon")
+    app.debug("sun is " + altitude.toFixed(2) + " degrees above horizon")
     if (altitude > 0){
-      debug("day, lights: " + props.Day)
+      app.debug("day, lights: " + props.Day)
       lightLevel = props.Day
     }
     else if (altitude < -6){
       if (altitude < -12){
         if (altitude < -18){
-          debug("night, lights: " + props.Night)
+          app.debug("night, lights: " + props.Night)
           lightLevel = props.Night
         } else {
-          debug("astronomical dawn/dusk, lights: " + props.Astronomical)
+          app.debug("astronomical dawn/dusk, lights: " + props.Astronomical)
           lightLevel = props.Astronomical
         }
       } else {
-        debug("nautical dawn/dusk, lights: " + props.Nautical)
+        app.debug("nautical dawn/dusk, lights: " + props.Nautical)
         lightLevel = props.Nautical
       }
     } else {
-      debug("civil dawn/dusk, lights: " + props.Civil)
+      app.debug("civil dawn/dusk, lights: " + props.Civil)
       lightLevel = props.Civil
     }
 
@@ -152,18 +188,33 @@ function repeat(app, props, lightLevel){
     clearInterval(repeatTimer)
   }
   repeatTimer = setInterval(function() {
-    if (props.Seatalk1){
+    app.debug(props.Seatalk1.seatalkBool)
+    app.debug(props.FDX.fdxout)
+
+    if (props.Seatalk1.seatalkBool){
       seatalkCommand = seaTalk[lightLevel]
       nmea0183out = toSentence([
         '$STALK',
         seatalkCommand
       ]);
-      debug("nmea0183out: " + nmea0183out)
-      app.emit('nmea0183out', nmea0183out)
+      app.debug("nmea0183out: " + props.Seatalk1.seatalkOutput)
+      app.emit('nmea0183out', props.Seatalk1.seatalkOutput)
     }
 
-    if (props.FDX) {
-      debug("FDX not implemented")
+    if (props.FDX.fdxout) {
+      app.debug(props.FDX.fdxSerial)
+      app.debug(props.FDX.fdxBaud)
+
+      const buffer = Buffer.from(fdx[lightLevel], "hex")
+      app.debug("writing buffer " + buffer + " to FDX")
+      sPort.write(buffer, function (err, result) {
+        if (err) {
+          app.debug('Error while sending message : ' + err);
+        }
+        if (result) {
+          app.debug('Response received after sending message : ' + result);
+        }
+      });
     }
   }, repeatInterval)
 }
