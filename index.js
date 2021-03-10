@@ -55,6 +55,20 @@ module.exports = function(app) {
       title: "Plugin to control proprietary instrument lights",
       type: "object",
       properties: {
+        position: {
+          title: "Default position",
+          type: "object",
+          properties: {
+            lat: {
+              title: "Latitude",
+              type: "number"
+            },
+            lon: {
+              title: "Longitude",
+              type: "number"
+            }
+          }
+        },
         Seatalk1: {
           title: "Seatalk1 instruments",
           type: "object",
@@ -145,8 +159,15 @@ module.exports = function(app) {
       var position = app.getSelfPath('navigation.position.value')
 
       if (! position) {
-        app.debug("Position is unknown, aborting check")
-        return
+        if (props.position.lat && props.position.lon){
+          app.debug("using default position")
+          var now = new Date()
+          lat = props.position.lat
+          lon = props.position.lon
+        } else {
+          app.debug("Position is unknown, aborting check")
+          return
+        }
       }
       lat = position.latitude
       lon = position.longitude
@@ -184,7 +205,7 @@ module.exports = function(app) {
         lightLevel = props.Civil
         mode = "restricted visibility"
       }
-      
+
       app.handleMessage(pluginId, {
         updates: [
           {
