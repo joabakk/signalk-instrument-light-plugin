@@ -3,7 +3,9 @@
   "version": "0.2.0",
   "description": "Plugin that controls proprietary instrument lights",
   "keywords": [
-    "signalk-node-server-plugin"
+    "signalk-node-server-plugin",
+    "signalk-category-digital-switching",
+    "signalk-category-instruments"
   ],
   "homepage": "https://github.com/joabakk/signalk-instrument-light-plugin#readme",
   "bugs": {
