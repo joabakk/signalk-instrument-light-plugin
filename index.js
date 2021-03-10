@@ -193,17 +193,17 @@ module.exports = function(app) {
           } else {
             app.debug("astronomical dawn/dusk, lights: " + props.Astronomical)
             lightLevel = props.Astronomical
-            mode = "restricted visibility"
+            mode = "Astronomical twilight"
           }
         } else {
           app.debug("nautical dawn/dusk, lights: " + props.Nautical)
           lightLevel = props.Nautical
-          mode = "restricted visibility"
+          mode = "Nautical twilight"
         }
       } else {
         app.debug("civil dawn/dusk, lights: " + props.Civil)
         lightLevel = props.Civil
-        mode = "restricted visibility"
+        mode = "Civil twilight"
       }
 
       app.handleMessage(pluginId, {
@@ -213,6 +213,24 @@ module.exports = function(app) {
               {
                 path: 'environment.mode',
                 value: mode
+              }
+            ]
+          }
+        ]
+      })
+
+      app.handleMessage(pluginId, {
+        updates: [
+          {
+            values:
+            [
+              {
+                path: 'navigation.sun.elevation',
+                value: sunrisePos.altitude,
+                meta:{
+                  units:"rad",
+                  description:"Sun elevation above horizon"
+                }
               }
             ]
           }
