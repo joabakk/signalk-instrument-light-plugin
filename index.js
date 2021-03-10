@@ -26,8 +26,12 @@ module.exports = function(app) {
 
   plugin.start = function(props) {
     app.debug("starting...")
+
+    const port = props.FDX.serialPort === 'Enter Manually' ? props.FDX.manualSerialPort : props.FDX.serialPort
+    app.debug('Serial Port is %s', port)
+
     if (props.FDX.fdxout){
-      sPort = new SerialPort(props.FDX.fdxSerial, {baudRate: props.FDX.fdxBaud,
+      sPort = new SerialPort(props.FDX.serialPort, {baudRate: props.FDX.fdxBaud,
         parity: 'none'}, false);
       }
 
@@ -51,101 +55,119 @@ module.exports = function(app) {
     plugin.name = "Instrument lights"
     plugin.description = "Plugin to control proprietary instrument lights"
 
-    plugin.schema = {
-      title: "Plugin to control proprietary instrument lights",
-      type: "object",
-      properties: {
-        position: {
-          title: "Default position",
-          type: "object",
-          properties: {
-            lat: {
-              title: "Latitude",
-              type: "number"
-            },
-            lon: {
-              title: "Longitude",
-              type: "number"
+    plugin.schema = function() {
+      const schema = {
+        title: "Plugin to control proprietary instrument lights",
+        type: "object",
+        properties: {
+          position: {
+            title: "Default position",
+            type: "object",
+            properties: {
+              lat: {
+                title: "Latitude",
+                type: "number"
+              },
+              lon: {
+                title: "Longitude",
+                type: "number"
+              }
             }
-          }
-        },
-        Seatalk1: {
-          title: "Seatalk1 instruments",
-          type: "object",
-          properties: {
-            seatalkBool: {
-              title: "Seatalk 1",
-              type: "boolean",
-              default: false
-            },
-            seatalkOutput: {
-              title: "Seatalk output name",
-              type: "string",
-              default: "seatalkOut"
+          },
+          Seatalk1: {
+            title: "Seatalk1 instruments",
+            type: "object",
+            properties: {
+              seatalkBool: {
+                title: "Seatalk 1",
+                type: "boolean",
+                default: false
+              },
+              seatalkOutput: {
+                title: "Seatalk output name",
+                type: "string",
+                default: "seatalkOut"
+              }
             }
-          }
-        },
-        FDX: {
-          title: "Silva/Nexus/Garmin instruments (FDX)",
-          type: "object",
-          properties: {
-            fdxout: {
-              title: "Silva/Nexus/Garmin instruments (FDX)",
-              type: "boolean",
-              default: false
-            },
-            fdxBaud: {
-              title: "Baud rate for FDX",
-              type: "number",
-              default: 19200
-            },
-            fdxSerial: {
-              title: "Serial port for FDX protocol (eg. GND10)",
-              type: "string"
+          },
+          FDX: {
+            title: "Silva/Nexus/Garmin instruments (FDX)",
+            type: "object",
+            properties: {
+              fdxout: {
+                title: "Silva/Nexus/Garmin instruments (FDX)",
+                type: "boolean",
+                default: false
+              },
+              fdxBaud: {
+                title: "Baud rate for FDX",
+                type: "number",
+                default: 19200
+              },
+              serialPort: {
+                title: "Serial Port for FDX protocol (eg. GND10)",
+                type: "string"
+              },
+              manualSerialPort: {
+                title: "Manual Serial Port for FDX protocol (eg. GND10)",
+                type: "string",
+              }
             }
-          }
-        },
-        UpdateInterval: {
-          title: "Interval to check for change in daylight (minutes)",
-          type: "number",
-          default: 30
-        },
-        Day: {
-          title: "Display lights during day (from sunset till sunrise)",
-          type: "number",
-          default: 0,
-          "enum": [0,1,2,3],
-          "enumNames": ["off", "dim", "on", "bright"]
-        },
-        Civil: {
-          title: "Display lights during civil twilight (0-6 deg below horizon)",
-          type: "number",
-          default: 0,
-          "enum": [0,1,2,3],
-          "enumNames": ["off", "dim", "on", "bright"]
-        },
-        Nautical: {
-          title: "Display lights during nautical twilight (6-12 deg below horizon)",
-          type: "number",
-          default: 0,
-          "enum": [0,1,2,3],
-          "enumNames": ["off", "dim", "on", "bright"]
-        },
-        Astronomical: {
-          title: "Display lights during astronomical twilight (12-18 deg below horizon)",
-          type: "number",
-          default: 0,
-          "enum": [0,1,2,3],
-          "enumNames": ["off", "dim", "on", "bright"]
-        },
-        Night: {
-          title: "Display lights on during night (sun below 18 deg)",
-          type: "number",
-          default: 0,
-          "enum": [0,1,2,3],
-          "enumNames": ["off", "dim", "on", "bright"]
-        },
+          },
+          UpdateInterval: {
+            title: "Interval to check for change in daylight (minutes)",
+            type: "number",
+            default: 30
+          },
+          Day: {
+            title: "Display lights during day (from sunset till sunrise)",
+            type: "number",
+            default: 0,
+            "enum": [0,1,2,3],
+            "enumNames": ["off", "dim", "on", "bright"]
+          },
+          Civil: {
+            title: "Display lights during civil twilight (0-6 deg below horizon)",
+            type: "number",
+            default: 0,
+            "enum": [0,1,2,3],
+            "enumNames": ["off", "dim", "on", "bright"]
+          },
+          Nautical: {
+            title: "Display lights during nautical twilight (6-12 deg below horizon)",
+            type: "number",
+            default: 0,
+            "enum": [0,1,2,3],
+            "enumNames": ["off", "dim", "on", "bright"]
+          },
+          Astronomical: {
+            title: "Display lights during astronomical twilight (12-18 deg below horizon)",
+            type: "number",
+            default: 0,
+            "enum": [0,1,2,3],
+            "enumNames": ["off", "dim", "on", "bright"]
+          },
+          Night: {
+            title: "Display lights on during night (sun below 18 deg)",
+            type: "number",
+            default: 0,
+            "enum": [0,1,2,3],
+            "enumNames": ["off", "dim", "on", "bright"]
+          },
+        }
       }
+      return new Promise((resolve, reject) => {
+        app.getSerialPorts()
+        .then(ports => {
+          schema.properties.FDX.properties.serialPort.enum = [ 'Enter Manually', ...ports.serialports.map(port=> port.path) ]
+          schema.properties.FDX.properties.serialPort.enumNames = [ 'Enter Manually', ...ports.serialports.map(port => `${port.path} (${port.manufacturer}/${port.vendorId}/${port.productId})`)]
+          resolve(schema)
+        })
+        .catch(err => {
+          console.error(err)
+          resolve(schema)
+        })
+      })
     }
     return plugin;
   }
@@ -261,7 +283,7 @@ module.exports = function(app) {
       }
 
       if (props.FDX.fdxout) {
-        app.debug(props.FDX.fdxSerial)
+        app.debug(props.FDX.serialPort)
         app.debug(props.FDX.fdxBaud)
 
         const buffer = Buffer.from(fdx[lightLevel], "hex")
