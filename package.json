@@ -24,6 +24,7 @@
     "prepublish": "npm run snyk-protect"
   },
   "dependencies": {
+    "lodash": "^4.17.21",
     "react": "^16.14.0",
     "react-jsonschema-form": "^1.0.0",
     "serialport": "^9.0.7",
