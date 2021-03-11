@@ -27,11 +27,11 @@ module.exports = function(app) {
   plugin.start = function(props) {
     app.debug("starting...")
 
-    const port = props.FDX.serialPort === 'Enter Manually' ? props.FDX.manualSerialPort : props.FDX.serialPort
+    const port = props.FDX.serialPort === '[Enter Manually]' ? props.FDX.manualSerialPort : props.FDX.serialPort
     app.debug('Serial Port is %s', port)
 
-    if (props.FDX.fdxout){
-      sPort = new SerialPort(props.FDX.serialPort, {baudRate: props.FDX.fdxBaud,
+    if (props.FDX.fdxout && port != ''){
+      sPort = new SerialPort(port, {baudRate: props.FDX.fdxBaud,
         parity: 'none'}, false);
       }
 
@@ -45,9 +45,6 @@ module.exports = function(app) {
       if (unsubscribe) {
         unsubscribe()
       }
-      sPort.close(function (err) {
-        console.log('port closed', err);
-      });
       app.debug("Stopped")
     }
 
@@ -110,7 +107,7 @@ module.exports = function(app) {
               },
               manualSerialPort: {
                 title: "Manual Serial Port for FDX protocol (eg. GND10)",
-                type: "string",
+                type: "string"
               }
             }
           },
@@ -159,8 +156,8 @@ module.exports = function(app) {
       return new Promise((resolve, reject) => {
         app.getSerialPorts()
         .then(ports => {
-          schema.properties.FDX.properties.serialPort.enum = [ 'Enter Manually', ...ports.serialports.map(port=> port.path) ]
-          schema.properties.FDX.properties.serialPort.enumNames = [ 'Enter Manually', ...ports.serialports.map(port => `${port.path} (${port.manufacturer}/${port.vendorId}/${port.productId})`)]
+          schema.properties.FDX.properties.serialPort.enum = [ '[Enter Manually]', ...ports.serialports.map(port=> port.path) ]
+          schema.properties.FDX.properties.serialPort.enumNames = [ '[Enter Manually]', ...ports.serialports.map(port => `${port.path} ${port.manufacturer || ""}`)]
           resolve(schema)
         })
         .catch(err => {
