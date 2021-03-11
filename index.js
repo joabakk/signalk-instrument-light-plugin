@@ -176,7 +176,11 @@ module.exports = function(app) {
       app.debug("I am doing my " + minutes + " minutes check")
       var now = new Date()
       var position = app.getSelfPath('navigation.position.value')
-
+      if (position){
+        lat = position.latitude
+        lon = position.longitude
+      }
+      
       if (! position) {
         if (props.position.lat && props.position.lon){
           app.debug("using default position")
@@ -188,8 +192,7 @@ module.exports = function(app) {
           return
         }
       }
-      lat = position.latitude
-      lon = position.longitude
+
       var sunrisePos = SunCalc.getPosition(new Date(), lat, lon)
       var lightLevel
 
