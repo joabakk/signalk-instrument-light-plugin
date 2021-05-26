@@ -27,7 +27,7 @@
     "lodash": "^4.17.21",
     "react": "^16.14.0",
     "react-jsonschema-form": "^1.0.0",
-    "serialport": "^9.0.7",
+    "serialport": "^9.0.8",
     "snyk": "^1.483.0",
     "suncalc": "^1.8.0"
   },
