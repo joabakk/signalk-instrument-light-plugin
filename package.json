@@ -28,7 +28,7 @@
     "react": "^16.14.0",
     "react-jsonschema-form": "^1.0.0",
     "serialport": "^9.0.7",
-    "snyk": "^1.483.0",
+    "snyk": "^1.685.0",
     "suncalc": "^1.8.0"
   },
   "devDependencies": {
