@@ -24,11 +24,11 @@
     "prepublish": "npm run snyk-protect"
   },
   "dependencies": {
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "react": "^16.14.0",
     "react-jsonschema-form": "^1.0.0",
     "serialport": "^9.0.7",
-    "snyk": "^1.680.0",
+    "snyk": "^1.996.0",
     "suncalc": "^1.8.0"
   },
   "devDependencies": {
