@@ -1,9 +1,7 @@
 const util = require('util')
 const _ = require('lodash')
 var SunCalc = require('suncalc')
-const react = require('react/package.json') // react is a peer dependency.
-const rjf = require('react-jsonschema-form')
-const SerialPort = require ('serialport')
+const { SerialPort } = require('serialport')
 
 // Seatalk1:
 const seaTalk = ["30,00,00", "30,00,04", "30,00,08", "30,00,0C"]
@@ -31,8 +29,8 @@ module.exports = function(app) {
     app.debug('Serial Port is %s', port)
 
     if (props.FDX.fdxout && port != ''){
-      sPort = new SerialPort(port, {baudRate: props.FDX.fdxBaud,
-        parity: 'none'}, false);
+      sPort = new SerialPort({path: port, baudRate: props.FDX.fdxBaud,
+        parity: 'none'});
       }
 
       app.debug("started")
