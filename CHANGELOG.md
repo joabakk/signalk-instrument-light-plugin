@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1
+
+### Changed
+
+- `serialport` is now an optional dependency, loaded only when FDX output is enabled. This passes the Signal K plugin CI App Store install check. Seatalk1-only setups no longer need serialport, and FDX keeps working because serialport ships prebuilt binaries.
+
 ## 0.7.0
 
 ### Fixed

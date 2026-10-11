@@ -1,5 +1,4 @@
 const SunCalc = require('suncalc')
-const { SerialPort } = require('serialport')
 
 const PLUGIN_ID = 'signalk-instrument-light-plugin'
 
@@ -119,7 +118,12 @@ function fdxCommand (level) {
   return Buffer.from(FDX[level], 'hex')
 }
 
-function createPlugin (app, { SerialPort: Port = SerialPort } = {}) {
+// serialport is an optional dependency, only needed for FDX output
+function loadSerialPort () {
+  return require('serialport').SerialPort
+}
+
+function createPlugin (app, { SerialPort: Port } = {}) {
   const plugin = {}
   let props
   let checkTimer
@@ -159,6 +163,14 @@ function createPlugin (app, { SerialPort: Port = SerialPort } = {}) {
       return
     }
     app.debug('Serial Port is %s', path)
+    if (!Port) {
+      try {
+        Port = loadSerialPort()
+      } catch (err) {
+        setError(`FDX output needs the serialport package, which could not be loaded: ${err.message}`)
+        return
+      }
+    }
     serialPort = new Port({ path, baudRate: props.FDX.fdxBaud, parity: 'none' })
     serialPort.on('error', err => setError(`FDX serial port ${path}: ${err.message}`))
   }

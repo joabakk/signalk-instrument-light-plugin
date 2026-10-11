@@ -244,6 +244,18 @@ describe('FDX serial output', () => {
     plugin.stop()
   })
 
+  it('loads serialport on demand and reports a missing device', async () => {
+    const app = fakeApp({ position: EQUATOR })
+    const plugin = createPlugin(app)
+    plugin.start({ FDX: { fdxout: true, serialPort: '/dev/does-not-exist' } })
+    await new Promise(resolve => {
+      const poll = () => app.error ? resolve() : setImmediate(poll)
+      poll()
+    })
+    assert.match(app.error, /FDX serial port \/dev\/does-not-exist/)
+    plugin.stop()
+  })
+
   it('reports a serial port that cannot be opened', async () => {
     const app = fakeApp({ position: EQUATOR })
     const plugin = createPlugin(app, { SerialPort: TestPort })
