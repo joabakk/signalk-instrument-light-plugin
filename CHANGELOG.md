@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.0
+
+### Changed
+
+- The position is read and the sun's phase changes for the next 24 hours are worked out once a day, instead of checking the sun every 30 minutes. The plugin stores the time of each change (astronomical, nautical and civil twilight, day and night) and switches the lights exactly when it happens, rather than up to 30 minutes late.
+- The plugin status shows the next phase change and its time.
+- The schedule is worked out again when the system clock changes, for example when a Raspberry Pi sets its time from GPS.
+
+### Removed
+
+- The *Interval to check for change in daylight* setting, which is no longer needed.
+
 ## 0.7.1
 
 ### Changed
