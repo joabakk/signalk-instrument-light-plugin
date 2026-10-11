@@ -5,7 +5,7 @@
 
 A [Signal K](https://signalk.org) server plugin that dims and brightens your instrument backlights automatically, following the sun.
 
-The plugin works out the sun's elevation from the boat's position, picks the phase of the day and sends the light level you chose for that phase to your instruments:
+Once a day the plugin reads the boat's position and works out when the sun will move from one phase of the day to the next over the coming 24 hours. It stores those times and switches your instruments to the light level you chose for each phase exactly when it begins:
 
 | Phase | Sun elevation |
 |---|---|
@@ -16,6 +16,8 @@ The plugin works out the sun's elevation from the boat's position, picks the pha
 | Night | more than 18° below the horizon |
 
 Each phase can be set to **off**, **dim**, **on** or **bright**. The level is resent every 30 seconds so instruments that were switched on later pick it up too.
+
+The plugin status shows the current phase and the next change, for example *Civil twilight: lights dim, next: Day at 07:12*. Near the poles, where the sun may not cross a boundary for days, the lights stay in the current phase until it does. If the server's clock changes, for example when a Raspberry Pi sets its time from GPS after starting, the times are worked out again.
 
 ![Plugin configuration](./docs/screenshot-config.png)
 

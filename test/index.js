@@ -1,24 +1,33 @@
 const { describe, it, beforeEach, afterEach, mock } = require('node:test')
 const assert = require('node:assert/strict')
 const { SerialPortMock } = require('serialport')
+const SunCalc = require('suncalc')
 
 const createPluginForApp = require('..')
-const { createPlugin, sunPhase, seatalkSentence, fdxCommand, withDefaults, baseSchema } = createPluginForApp
+const { createPlugin, sunPhase, sunSchedule, seatalkSentence, fdxCommand, withDefaults, baseSchema } = createPluginForApp
 
 // Equinox at 0°N 0°E: the sun is almost overhead at noon and far below
 // the horizon at midnight
 const NOON = Date.UTC(2024, 2, 20, 12, 0)
 const MIDNIGHT = Date.UTC(2024, 2, 20, 0, 0)
 const EQUATOR = { latitude: 0, longitude: 0 }
+const HOUR = 60 * 60 * 1000
+const DAY = 24 * HOUR
 
 function fakeApp ({ position, serialports } = {}) {
   const app = {
+    position,
+    positionReads: 0,
     deltas: [],
     emitted: [],
     status: undefined,
     error: undefined,
     debug: () => {},
-    getSelfPath: path => (path === 'navigation.position.value' ? position : undefined),
+    getSelfPath: path => {
+      if (path !== 'navigation.position.value') return undefined
+      app.positionReads++
+      return app.position
+    },
     handleMessage: (id, delta) => app.deltas.push(delta),
     emit: (event, value) => app.emitted.push({ event, value }),
     setPluginStatus: msg => { app.status = msg },
@@ -38,6 +47,17 @@ function deltaValue (app, path) {
 
 const levels = { Day: 1, Civil: 2, Nautical: 3, Astronomical: 3, Night: 3 }
 
+// Advance the mocked clock like a real one. A single mock.timers.tick runs
+// every due callback with Date already at the end of the tick, which the
+// plugin would take for a jump of the system clock.
+function advance (ms) {
+  while (ms > 0) {
+    const step = Math.min(ms, 30 * 1000)
+    mock.timers.tick(step)
+    ms -= step
+  }
+}
+
 describe('sunPhase', () => {
   it('maps sun elevation to the configured phase', () => {
     assert.equal(sunPhase(45).setting, 'Day')
@@ -50,6 +70,58 @@ describe('sunPhase', () => {
     assert.equal(sunPhase(-17).setting, 'Astronomical')
     assert.equal(sunPhase(-18).setting, 'Night')
     assert.equal(sunPhase(-90).setting, 'Night')
+  })
+})
+
+function elevationDegrees (time, lat, lon) {
+  return SunCalc.getPosition(time, lat, lon).altitude * 180 / Math.PI
+}
+
+describe('sunSchedule', () => {
+  it('lists every phase change of the next 24 hours in order', () => {
+    const from = new Date(MIDNIGHT)
+    const changes = sunSchedule(from, new Date(MIDNIGHT + DAY), 0, 0)
+    assert.deepEqual(changes.map(change => change.phase.setting),
+      ['Astronomical', 'Nautical', 'Civil', 'Day', 'Civil', 'Nautical', 'Astronomical', 'Night'])
+    for (const change of changes) {
+      assert.ok(change.time > from && change.time <= new Date(MIDNIGHT + DAY))
+    }
+  })
+
+  it('covers windows longer than a day', () => {
+    const changes = sunSchedule(new Date(NOON - DAY), new Date(NOON + DAY), 0, 0)
+    assert.equal(changes.length, 16)
+    assert.ok(changes.at(-1).time > new Date(NOON + 6 * HOUR))
+  })
+
+  it('places each change where the sun crosses the phase boundary', () => {
+    // Oslo, where the sun goes through every phase in March
+    const [lat, lon] = [59.91, 10.75]
+    const rising = { Astronomical: -18, Nautical: -12, Civil: -6, Day: 0 }
+    const setting = { Civil: 0, Nautical: -6, Astronomical: -12, Night: -18 }
+    const changes = sunSchedule(new Date(NOON), new Date(NOON + DAY), lat, lon)
+    assert.equal(changes.length, 8)
+    for (const change of changes) {
+      const minuteLater = new Date(change.time.getTime() + 60 * 1000)
+      const isRising = elevationDegrees(minuteLater, lat, lon) > elevationDegrees(change.time, lat, lon)
+      const boundary = (isRising ? rising : setting)[change.phase.setting]
+      // SunCalc's event times and sun positions agree to about a minute
+      assert.ok(Math.abs(elevationDegrees(change.time, lat, lon) - boundary) < 0.3,
+        `${change.phase.setting} at ${change.time.toISOString()}`)
+      // a minute later the sun is in the new phase
+      assert.equal(sunPhase(elevationDegrees(minuteLater, lat, lon)), change.phase)
+    }
+  })
+
+  it('leaves out boundaries the sun never crosses near the poles', () => {
+    const midsummer = Date.UTC(2024, 5, 21)
+    assert.deepEqual(sunSchedule(new Date(midsummer), new Date(midsummer + DAY), 78, 15), [])
+
+    const midwinter = Date.UTC(2024, 11, 21)
+    const settings = sunSchedule(new Date(midwinter), new Date(midwinter + DAY), 78, 15)
+      .map(change => change.phase.setting)
+    assert.ok(settings.length > 0)
+    assert.ok(settings.every(s => ['Night', 'Astronomical', 'Nautical'].includes(s)), settings.join())
   })
 })
 
@@ -70,7 +142,6 @@ describe('commands', () => {
 describe('withDefaults', () => {
   it('fills an empty configuration from the schema', () => {
     const props = withDefaults(baseSchema(), {})
-    assert.equal(props.UpdateInterval, 30)
     assert.equal(props.Day, 0)
     assert.equal(props.Night, 0)
     assert.deepEqual(props.Seatalk1, { seatalkBool: false, seatalkOutput: 'seatalkOut' })
@@ -113,7 +184,7 @@ describe('plugin', () => {
   let plugin
 
   beforeEach(() => {
-    mock.timers.enable({ apis: ['setInterval', 'Date'], now: NOON })
+    mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'], now: NOON })
   })
 
   afterEach(() => {
@@ -139,7 +210,7 @@ describe('plugin', () => {
     plugin.start({ ...levels })
     assert.equal(deltaValue(app, 'environment.mode'), 'day')
     assert.ok(deltaValue(app, 'navigation.sun.elevation') > 1.5)
-    assert.equal(app.status, 'day: lights dim')
+    assert.match(app.status, /^day: lights dim, next: Civil twilight at \d\d:\d\d$/)
   })
 
   it('sends the Seatalk1 level for the current phase and repeats it', () => {
@@ -148,11 +219,11 @@ describe('plugin', () => {
     plugin.start({ ...levels, Seatalk1: { seatalkBool: true, seatalkOutput: 'st1' } })
     assert.deepEqual(app.emitted, [{ event: 'st1', value: '$STALK,30,00,04*6A' }])
 
-    mock.timers.tick(30 * 1000)
+    advance(30 * 1000)
     assert.equal(app.emitted.length, 2)
 
     plugin.stop()
-    mock.timers.tick(60 * 1000)
+    advance(60 * 1000)
     assert.equal(app.emitted.length, 2)
   })
 
@@ -165,9 +236,87 @@ describe('plugin', () => {
     assert.deepEqual(app.emitted.at(-1), { event: 'seatalkOut', value: '$STALK,30,00,0C*1D' })
 
     // twelve hours later, at the next check
-    mock.timers.tick(12 * 60 * 60 * 1000)
+    advance(12 * 60 * 60 * 1000)
     assert.equal(deltaValue(app, 'environment.mode'), 'day')
     assert.deepEqual(app.emitted.at(-1), { event: 'seatalkOut', value: '$STALK,30,00,00*6E' })
+  })
+
+  it('switches at each stored phase change', () => {
+    mock.timers.setTime(MIDNIGHT)
+    const app = fakeApp({ position: EQUATOR })
+    plugin = createPlugin(app)
+    plugin.start({ ...levels })
+    assert.equal(deltaValue(app, 'environment.mode'), 'night')
+
+    for (const change of sunSchedule(new Date(MIDNIGHT), new Date(MIDNIGHT + DAY), 0, 0)) {
+      advance(change.time - Date.now() - 1000)
+      assert.notEqual(deltaValue(app, 'environment.mode'), change.phase.mode)
+      advance(1000)
+      assert.equal(deltaValue(app, 'environment.mode'), change.phase.mode)
+    }
+  })
+
+  it('shows the next phase change in the status', () => {
+    mock.timers.setTime(MIDNIGHT)
+    const app = fakeApp({ position: EQUATOR })
+    plugin = createPlugin(app)
+    plugin.start({ ...levels })
+    assert.match(app.status, /^night: lights bright, next: Astronomical twilight at \d\d:\d\d$/)
+  })
+
+  it('reads the position once a day', () => {
+    const app = fakeApp({ position: EQUATOR })
+    plugin = createPlugin(app)
+    plugin.start({ ...levels })
+    assert.equal(app.positionReads, 1)
+    advance(DAY - 1000)
+    assert.equal(app.positionReads, 1)
+    advance(1000)
+    assert.equal(app.positionReads, 2)
+  })
+
+  it('retries every minute until there is a position', () => {
+    const app = fakeApp()
+    plugin = createPlugin(app)
+    plugin.start({ ...levels })
+    assert.equal(app.status, 'Waiting for position')
+    advance(60 * 1000)
+    assert.equal(app.positionReads, 2)
+
+    app.position = EQUATOR
+    advance(60 * 1000)
+    assert.equal(deltaValue(app, 'environment.mode'), 'day')
+    advance(HOUR)
+    assert.equal(app.positionReads, 3)
+  })
+
+  it('recomputes the schedule when the system clock jumps', () => {
+    const app = fakeApp({ position: EQUATOR })
+    plugin = createPlugin(app)
+    plugin.start({ ...levels })
+    assert.equal(deltaValue(app, 'environment.mode'), 'day')
+
+    // e.g. a Raspberry Pi setting its clock from GPS twelve hours later
+    mock.timers.setTime(NOON + 12 * HOUR)
+    mock.timers.tick(30 * 1000)
+    assert.equal(deltaValue(app, 'environment.mode'), 'night')
+    assert.equal(app.positionReads, 2)
+  })
+
+  it('starts in the phase of the last change, even right at a boundary', () => {
+    // SunCalc's event times and sun positions differ by up to a minute; start
+    // just after astronomical dawn in Oslo, when the sun's computed elevation
+    // is still below -18°
+    const oslo = { latitude: 59.91, longitude: 10.75 }
+    const [dawn] = sunSchedule(new Date(Date.UTC(2024, 2, 21)), new Date(Date.UTC(2024, 2, 21, 12)), 59.91, 10.75)
+    assert.equal(dawn.phase.setting, 'Astronomical')
+    mock.timers.setTime(dawn.time.getTime() + 5 * 1000)
+    assert.ok(elevationDegrees(new Date(), 59.91, 10.75) < -18)
+
+    const app = fakeApp({ position: oslo })
+    plugin = createPlugin(app)
+    plugin.start({ ...levels })
+    assert.equal(deltaValue(app, 'environment.mode'), 'Astronomical twilight')
   })
 
   it('uses the default position when the boat has none', () => {
@@ -191,7 +340,7 @@ describe('plugin', () => {
     plugin = createPlugin(app)
     plugin.start({ FDX: { fdxout: true } })
     assert.match(app.error, /no serial port is configured/)
-    mock.timers.tick(30 * 1000)
+    advance(30 * 1000)
   })
 })
 
@@ -209,7 +358,7 @@ describe('FDX serial output', () => {
   beforeEach(() => {
     ports = []
     SerialPortMock.binding.createPort(path, { record: true })
-    mock.timers.enable({ apis: ['setInterval', 'Date'], now: NOON })
+    mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'], now: NOON })
   })
 
   afterEach(() => {
