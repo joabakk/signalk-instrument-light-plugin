@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>Instrument Lights</title>
+  <rect width="128" height="128" rx="24" fill="#0b1f3a"/>
+  <!-- instrument display -->
+  <rect x="18" y="30" width="92" height="68" rx="10" fill="#14304f" stroke="#4fa3ff" stroke-width="3"/>
+  <rect x="26" y="38" width="76" height="52" rx="5" fill="#ff9d2e" opacity="0.9"/>
+  <text x="64" y="74" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="700" fill="#2a1500" text-anchor="middle">12.4</text>
+  <!-- sun setting behind the horizon -->
+  <path d="M40 22 a12 12 0 0 1 24 0 z" fill="#ffd166"/>
+  <line x1="30" y1="22" x2="74" y2="22" stroke="#ffd166" stroke-width="3" stroke-linecap="round"/>
+  <!-- brightness steps -->
+  <rect x="80" y="106" width="6" height="8" rx="1.5" fill="#4fa3ff"/>
+  <rect x="90" y="102" width="6" height="12" rx="1.5" fill="#4fa3ff"/>
+  <rect x="100" y="98" width="6" height="16" rx="1.5" fill="#4fa3ff"/>
+</svg>

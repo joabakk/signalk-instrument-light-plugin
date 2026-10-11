@@ -1,11 +1,17 @@
 {
   "name": "signalk-instrument-light-plugin",
-  "version": "0.6.0",
-  "description": "Plugin that controls proprietary instrument lights",
+  "version": "0.7.1",
+  "description": "Dims and brightens Seatalk1 and FDX (Nexus/Garmin/Silva) instrument backlights automatically, following the sun",
   "keywords": [
     "signalk-node-server-plugin",
     "signalk-category-digital-switching",
-    "signalk-category-instruments"
+    "signalk-category-instruments",
+    "signalk-category-hardware",
+    "seatalk",
+    "fdx",
+    "nexus",
+    "garmin",
+    "instrument-lights"
   ],
   "homepage": "https://github.com/joabakk/signalk-instrument-light-plugin#readme",
   "bugs": {
@@ -14,26 +20,34 @@
   "license": "Apache-2.0",
   "author": "Joachim Bakke",
   "main": "index.js",
+  "files": [
+    "index.js",
+    "test/",
+    "docs/",
+    "CHANGELOG.md"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/joabakk/signalk-instrument-light-plugin.git"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "test": "mocha"
+    "test": "node --test"
   },
   "dependencies": {
-    "lodash": "^4.17.21",
-    "serialport": "^12.0.0",
     "suncalc": "^1.8.0"
   },
-  "devDependencies": {
-    "chai": "^4.0.0",
-    "chai-things": "^0.2.0",
-    "debug": "^4.1.1",
-    "mocha": "^6.1.4",
-    "signalk-schema": "0.0.1-3"
+  "optionalDependencies": {
+    "serialport": "^12.0.0"
   },
-  "engines": {
-    "node": ">=16"
+  "signalk": {
+    "displayName": "Instrument Lights",
+    "appIcon": "./docs/icon.svg",
+    "screenshots": [
+      "./docs/screenshot-config.png",
+      "./docs/screenshot-light-levels.png"
+    ]
   }
 }
