@@ -1,6 +1,6 @@
 {
   "name": "signalk-instrument-light-plugin",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Dims and brightens Seatalk1 and FDX (Nexus/Garmin/Silva) instrument backlights automatically, following the sun",
   "keywords": [
     "signalk-node-server-plugin",
